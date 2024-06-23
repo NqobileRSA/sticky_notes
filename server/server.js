@@ -1,13 +1,20 @@
+require("dotenv").config(); //allows using .env throughout our package
 const express = require("express");
 const path = require("path");
-const { logger } = require("./middleware/logger");
-const errorHandler = require("./middleware/errorHandler");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
+const mongoose = require("mongoose");
+
+const connectDB = require("./config/dbconn");
+const { logger, logEvents } = require("./middleware/logger");
+const errorHandler = require("./middleware/errorHandler");
 const corsOptions = require("./config/corsOptions");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+console.log(process.env.NODE_ENV);
+connectDB();
 
 app.use(logger);
 app.use(cors(corsOptions));
@@ -30,4 +37,15 @@ app.all("*", (req, res) => {
 
 app.use(errorHandler);
 
-app.listen(PORT, () => console.log(`Server running on port: ${PORT}`));
+mongoose.connection.once("open", () => {
+  console.log("connected to mongoDB");
+  app.listen(PORT, () => console.log(`Server running on port: ${PORT}`));
+});
+
+mongoose.connection.on("error", (error) => {
+  console.log(error);
+  logEvents(
+    `${err.no}: ${err.code}\t${err.syscall}\t${err.hostname}`,
+    "mongoErrLog.log"
+  );
+});
